@@ -26,7 +26,6 @@ import copy
 import numpy as np
 from gluonts.core.component import DType
 from gluonts.dataset.common import Dataset, FileDataset, ListDataset
-from gluonts.dataset.util import ReplicaInfo
 from gluonts.transform import Transformation
 from mxnet.ndarray import NDArray
 
