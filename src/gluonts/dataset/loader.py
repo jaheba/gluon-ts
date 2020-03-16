@@ -10,6 +10,86 @@
 # on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
+import itertools
+import pickle
+import io
+import sys
+import multiprocessing
+import multiprocessing.queues
+import time
+from multiprocessing.reduction import ForkingPickler, DupFd, recv_handle
+from multiprocessing.pool import ThreadPool, Pool
+from multiprocessing import Queue
+from typing import Callable, Iterable
+import copy
+
+import numpy as np
+from gluonts.core.component import DType
+from gluonts.dataset.common import Dataset, FileDataset, ListDataset
+from gluonts.dataset.util import ReplicaInfo
+from gluonts.transform import Transformation
+from mxnet.ndarray import NDArray
+
+try:
+    import multiprocessing.resource_sharer
+except ImportError:
+    pass
+
+from mxnet import nd, context
+import mxnet as mx
+
+if sys.platform == "darwin" or sys.platform == "win32":
+
+    def rebuild_ndarray(*args):
+        """Rebuild ndarray from pickled shared memory"""
+        # pylint: disable=no-value-for-parameter
+        return nd.NDArray(nd.ndarray._new_from_shared_mem(*args))
+
+    def reduce_ndarray(data):
+        """Reduce ndarray to shared memory handle"""
+        return rebuild_ndarray, data._to_shared_mem()
+
+
+else:
+
+    def rebuild_ndarray(pid, fd, shape, dtype):
+        """Rebuild ndarray from pickled shared memory"""
+        # pylint: disable=no-value-for-parameter
+        if sys.version_info[0] == 2:
+            fd = multiprocessing.reduction.rebuild_handle(fd)
+        else:
+            fd = fd.detach()
+        return nd.NDArray(
+            nd.ndarray._new_from_shared_mem(pid, fd, shape, dtype)
+        )
+
+    def reduce_ndarray(data):
+        """Reduce ndarray to shared memory handle"""
+        # keep a local ref before duplicating fd
+        data = data.as_in_context(context.Context("cpu_shared", 0))
+        pid, fd, shape, dtype = data._to_shared_mem()
+        if sys.version_info[0] == 2:
+            fd = multiprocessing.reduction.reduce_handle(fd)
+        else:
+            fd = DupFd(fd)
+        return rebuild_ndarray, (pid, fd, shape, dtype)
+
+
+ForkingPickler.register(nd.NDArray, reduce_ndarray)
+
+
+# Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License").
+# You may not use this file except in compliance with the License.
+# A copy of the License is located at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# or in the "license" file accompanying this file. This file is distributed
+# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 # Standard library imports
 import functools
@@ -59,7 +139,7 @@ class DataLoader(Iterable[DataEntry]):
         dtype: DType = np.float32,
     ) -> None:
         self.batch_size = batch_size
-        self.ctx = mx.Context("cpu_shared", 0)
+        self.ctx = ctx
         self.dtype = dtype
         self.is_train = is_train
         self.dataset = dataset
