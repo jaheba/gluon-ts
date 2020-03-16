@@ -59,7 +59,7 @@ class DataLoader(Iterable[DataEntry]):
         dtype: DType = np.float32,
     ) -> None:
         self.batch_size = batch_size
-        self.ctx = ctx
+        self.ctx = mx.Context("cpu_shared", 0)
         self.dtype = dtype
         self.is_train = is_train
         self.dataset = dataset
