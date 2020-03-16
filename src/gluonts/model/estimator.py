@@ -188,7 +188,8 @@ class GluonEstimator(Estimator):
 
         from gluonts.dataset.util import PrefetchIterator
 
-        training_data_loader = PrefetchIterator(training_data_loader)
+        # training_data_loader = PrefetchIterator(training_data_loader)
+        training_data_loader = list(training_data_loader)
 
         validation_data_loader = None
         if validation_data is not None:
