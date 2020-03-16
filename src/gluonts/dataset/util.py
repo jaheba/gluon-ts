@@ -144,3 +144,28 @@ def cycle(it):
 
     while True:
         yield from it
+
+
+from multiprocessing import Queue, Process
+
+def prefetch(it, queue, sentinel):
+    for item in it:
+        queue.put(item)
+
+    queue.put(sentinel)
+
+
+class PrefetchIterator:
+    def __init__(self, it, queue_size=10, sentinel=None):
+        self.it = it
+        self.queue = Queue(queue_size)
+        self.sentinel = sentinel
+
+        Process(target=prefetch, args=(self.it, self.queue, self.sentinel)).start()
+
+    def __iter__(self):
+        while True:
+            item = self.queue.get()
+            if item == self.sentinel:
+                break
+            yield item

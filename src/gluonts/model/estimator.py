@@ -186,6 +186,10 @@ class GluonEstimator(Estimator):
             dtype=self.dtype,
         )
 
+        from gluonts.dataset.util import PrefetchIterator
+
+        training_data_loader = PrefetchIterator(training_data_loader)
+
         validation_data_loader = None
         if validation_data is not None:
             validation_data_loader = ValidationDataLoader(
