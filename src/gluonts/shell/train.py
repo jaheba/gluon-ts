@@ -132,37 +132,13 @@ def run_train(
         )
 
 
-class Filter:
-    def __init__(self, fn, xs):
-        self.fn = fn
-        self.xs = xs
-
-    def __iter__(self):
-        for el in self.xs:
-            if self.fn(el):
-                yield el
-
-    def __len__(self):
-        return sum(1 for _ in self)
-
-
-from gluonts.nursery.glide import partition
-
-
-@partition.register
-def partition_filter(xs: Filter, n):
-    return [Filter(xs.fn, part) for part in partition(xs.xs, n)]
-
-
 def run_test(
     env: TrainEnv, predictor: Predictor, test_dataset: Dataset
 ) -> None:
     len_original = maybe_len(test_dataset)
 
-    from functools import partial
-    from gluonts.mx.loader import inference_data_loader as data_loader
     from gluonts.nursery.datasource.schema import get_standard_schema
-    from gluonts.nursery.glide import Map, partition
+    from gluonts.nursery.glide import Filter, Map
 
     len_filtered = len(test_dataset)
     test_dataset = Filter(

@@ -16,7 +16,15 @@ from toolz.functoolz import curry
 from ._partition import partition
 
 
-class Map:
+class M:
+    def __iter__(self):
+        raise NotImplementedError
+
+    def __len__(self):
+        raise NotImplementedError
+
+
+class Map(M):
     def __init__(self, fn, xs):
         self.fn = fn
         self.xs = xs
@@ -31,6 +39,20 @@ class Map:
 lift = curry(Map)
 
 
+class Filter(M):
+    def __init__(self, fn, xs):
+        self.fn = fn
+        self.xs = xs
+
+    def __iter__(self):
+        for el in self.xs:
+            if self.fn(el):
+                yield el
+
+    def __len__(self):
+        return sum(1 for _ in self)
+
+
 @partition.register
-def partition_map(xs: Map, n):
-    return [Map(xs.fn, part) for part in partition(xs.xs, n)]
+def partition_filter(xs: M, n):
+    return [type(xs)(xs.fn, part) for part in partition(xs.xs, n)]
