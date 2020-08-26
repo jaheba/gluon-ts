@@ -54,6 +54,8 @@ from gluonts.dataset.loader import DataBatch, InferenceDataLoader
 from gluonts.model.forecast import Forecast
 from gluonts.mx.context import get_mxnet_context
 from gluonts.mx.distribution import Distribution, DistributionOutput
+from gluonts.mx.loader import inference_data_loader
+from gluonts.nursery.glide import partition
 from gluonts.support.util import (
     export_repr_block,
     export_symb_block,
@@ -65,6 +67,7 @@ from gluonts.support.util import (
 from gluonts.transform import Transformation
 
 from .forecast_generator import ForecastGenerator, SampleForecastGenerator
+
 
 if TYPE_CHECKING:  # avoid circular import
     from gluonts.model.estimator import Estimator  # noqa
@@ -323,19 +326,15 @@ class GluonPredictor(Predictor):
         num_prefetch: Optional[int] = None,
         **kwargs,
     ) -> Iterator[Forecast]:
-        from functools import partial
-        from gluonts.mx.loader import inference_data_loader as data_loader
-        from gluonts.nursery.glide import partition
-
-        inference_data_loader = data_loader(
+        inference_data_loader_ = inference_data_loader(
             partition(dataset, 4),
-            partial(self.input_transform, is_train=False),
+            transform=functools.partial(self.input_transform, is_train=False),
             batch_size=self.batch_size,
             context=self.ctx,
         )
 
         yield from self.forecast_generator(
-            inference_data_loader=inference_data_loader,
+            inference_data_loader=inference_data_loader_,
             prediction_net=self.prediction_net,
             input_names=self.input_names,
             freq=self.freq,

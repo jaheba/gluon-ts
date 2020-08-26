@@ -12,7 +12,8 @@
 # permissions and limitations under the License.
 
 # Standard library imports
-from typing import Iterator, NamedTuple, Optional
+from functools import partial
+from typing import NamedTuple, Optional
 
 # Third-party imports
 import numpy as np
@@ -25,9 +26,11 @@ from gluonts.core import fqname_for
 from gluonts.core.component import DType, from_hyperparameters, validated
 from gluonts.core.exception import GluonTSHyperparametersError
 from gluonts.dataset.common import Dataset
-from gluonts.dataset.loader import TrainDataLoader, ValidationDataLoader
 from gluonts.model.predictor import Predictor
+from gluonts.mx.loader import train_data_loader
 from gluonts.mx.trainer import Trainer
+from gluonts.nursery.datasource.schema import get_standard_schema
+from gluonts.nursery.glide import Map, partition
 from gluonts.support.util import get_hybrid_forward_input_names
 from gluonts.transform import Transformation
 
@@ -204,12 +207,6 @@ class GluonEstimator(Estimator):
         shuffle_buffer_length: Optional[int] = None,
         **kwargs,
     ) -> TrainOutput:
-
-        from functools import partial
-        from gluonts.mx.loader import train_data_loader
-        from gluonts.nursery.datasource.schema import get_standard_schema
-        from gluonts.nursery.glide import Map, partition
-
         schema = get_standard_schema(self.freq)
         training_data = Map(schema, training_data)
         transformation = self.create_transformation()
@@ -222,17 +219,6 @@ class GluonEstimator(Estimator):
         )
 
         validation_data_loader = None
-        # if validation_data is not None:
-        #     validation_data_loader = ValidationDataLoader(
-        #         dataset=validation_data,
-        #         transform=transformation,
-        #         batch_size=self.trainer.batch_size,
-        #         ctx=self.trainer.ctx,
-        #         dtype=self.dtype,
-        #         num_workers=num_workers,
-        #         num_prefetch=num_prefetch,
-        #         **kwargs,
-        #     )
 
         # ensure that the training network is created within the same MXNet
         # context as the one that will be used during training
