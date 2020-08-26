@@ -325,25 +325,14 @@ class GluonPredictor(Predictor):
     ) -> Iterator[Forecast]:
         from functools import partial
         from gluonts.mx.loader import inference_data_loader as data_loader
-        from gluonts.nursery.datasource.schema import get_standard_schema
-        from gluonts.nursery.glide import Map, partition
+        from gluonts.nursery.glide import partition
 
         inference_data_loader = data_loader(
-            partition(dataset, 1),
+            partition(dataset, 4),
             partial(self.input_transform, is_train=False),
             batch_size=self.batch_size,
             context=self.ctx,
         )
-        # inference_data_loader = InferenceDataLoader(
-        #     dataset,
-        #     transform=self.input_transform,
-        #     batch_size=self.batch_size,
-        #     ctx=self.ctx,
-        #     dtype=self.dtype,
-        #     num_workers=num_workers,
-        #     num_prefetch=num_prefetch,
-        #     **kwargs,
-        # )
 
         yield from self.forecast_generator(
             inference_data_loader=inference_data_loader,

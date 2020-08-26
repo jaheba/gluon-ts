@@ -326,7 +326,6 @@ class Trainer:
                     return epoch_loss
 
                 for epoch_no in range(self.epochs):
-                    print("EPOCH", epoch_no)
                     if self.halt:
                         logger.info(f"Epoch[{epoch_no}] Interrupting training")
                         break

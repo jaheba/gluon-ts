@@ -53,11 +53,6 @@ def batchify(batch):
     return merge_with(stack, batch,)
 
 
-def print_return(x):
-    print("XXX")
-    return x
-
-
 def inference_data_loader(data, transform, context, batch_size):
     pipe = (
         glide.Pipeline()
