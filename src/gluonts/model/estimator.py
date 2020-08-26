@@ -204,33 +204,35 @@ class GluonEstimator(Estimator):
         shuffle_buffer_length: Optional[int] = None,
         **kwargs,
     ) -> TrainOutput:
+
+        from functools import partial
+        from gluonts.mx.loader import train_data_loader
+        from gluonts.nursery.datasource.schema import get_standard_schema
+        from gluonts.nursery.glide import Map, partition
+
+        schema = get_standard_schema(self.freq)
+        training_data = Map(schema, training_data)
         transformation = self.create_transformation()
 
-        training_data_loader = TrainDataLoader(
-            dataset=training_data,
-            transform=transformation,
+        training_data_loader = train_data_loader(
+            partition(training_data, 4),
+            transform=partial(transformation, is_train=True),
+            context=self.trainer.ctx,
             batch_size=self.trainer.batch_size,
-            num_batches_per_epoch=self.trainer.num_batches_per_epoch,
-            ctx=self.trainer.ctx,
-            dtype=self.dtype,
-            num_workers=num_workers,
-            num_prefetch=num_prefetch,
-            shuffle_buffer_length=shuffle_buffer_length,
-            **kwargs,
         )
 
         validation_data_loader = None
-        if validation_data is not None:
-            validation_data_loader = ValidationDataLoader(
-                dataset=validation_data,
-                transform=transformation,
-                batch_size=self.trainer.batch_size,
-                ctx=self.trainer.ctx,
-                dtype=self.dtype,
-                num_workers=num_workers,
-                num_prefetch=num_prefetch,
-                **kwargs,
-            )
+        # if validation_data is not None:
+        #     validation_data_loader = ValidationDataLoader(
+        #         dataset=validation_data,
+        #         transform=transformation,
+        #         batch_size=self.trainer.batch_size,
+        #         ctx=self.trainer.ctx,
+        #         dtype=self.dtype,
+        #         num_workers=num_workers,
+        #         num_prefetch=num_prefetch,
+        #         **kwargs,
+        #     )
 
         # ensure that the training network is created within the same MXNet
         # context as the one that will be used during training

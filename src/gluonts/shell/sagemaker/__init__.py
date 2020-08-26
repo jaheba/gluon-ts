@@ -131,6 +131,9 @@ def _get_current_host(resourceconfig: Path) -> str:
             return config["current_host"]
 
 
+from gluonts.nursery.datasource.jsonl import JsonLinesFiles
+
+
 def _load_datasets(
     hyperparameters: dict, channels: Dict[str, Path]
 ) -> Dict[str, Dataset]:
@@ -141,13 +144,5 @@ def _load_datasets(
     dataset_dict = {}
     for name in DATASET_NAMES:
         if name in channels:
-            file_dataset = FileDataset(channels[name], freq)
-            dataset_dict[name] = (
-                ListDataset(file_dataset, freq)
-                if listify_dataset
-                else file_dataset
-            )
-            logger.info(
-                f"gluonts[cached]: Type of {name} dataset is {type(dataset_dict[name])}"
-            )
+            dataset_dict[name] = JsonLinesFiles(channels[name])
     return dataset_dict

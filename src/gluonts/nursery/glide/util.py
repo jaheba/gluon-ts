@@ -24,6 +24,9 @@ class Map:
     def __iter__(self):
         yield from map(self.fn, self.xs)
 
+    def __len__(self):
+        return len(self.xs)
+
 
 lift = curry(Map)
 

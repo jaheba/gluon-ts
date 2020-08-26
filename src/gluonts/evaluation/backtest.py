@@ -96,9 +96,9 @@ def make_evaluation_predictions(
     # TODO or fix the evaluator so it supports missing values instead (all
     # TODO the test set may be gone otherwise with such a filtering)
 
-    dataset_trunc = TransformedDataset(
-        dataset, transformations=[transform.AdhocTransform(truncate_target)]
-    )
+    from gluonts.nursery.glide import Map
+
+    dataset_trunc = Map(truncate_target, dataset)
 
     return (
         predictor.predict(dataset_trunc, num_samples=num_samples),

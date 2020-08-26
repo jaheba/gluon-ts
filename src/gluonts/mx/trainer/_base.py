@@ -201,7 +201,7 @@ class Trainer:
                 static_alloc=True,
                 static_shape=True,
             ):
-                batch_size = train_iter.batch_size
+                batch_size = self.batch_size
 
                 best_epoch_info = {
                     "params_path": "%s-%s.params" % (base_path(), "init"),
@@ -242,8 +242,14 @@ class Trainer:
                     ):
                         self.avg_strategy.load_averaged_model(net)
 
-                    with tqdm(batch_iter) as it:
-                        for batch_no, data_entry in enumerate(it, start=1):
+                    with tqdm(
+                        batch_iter, total=self.num_batches_per_epoch
+                    ) as it:
+                        from gluonts.dataset.util import take
+
+                        for batch_no, data_entry in take(
+                            enumerate(it, start=1), self.num_batches_per_epoch
+                        ):
                             if self.halt:
                                 break
 
@@ -320,6 +326,7 @@ class Trainer:
                     return epoch_loss
 
                 for epoch_no in range(self.epochs):
+                    print("EPOCH", epoch_no)
                     if self.halt:
                         logger.info(f"Epoch[{epoch_no}] Interrupting training")
                         break

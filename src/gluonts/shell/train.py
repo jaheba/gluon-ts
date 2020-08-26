@@ -65,9 +65,11 @@ def run_train_and_test(
     logger.info(f"Using gluonts v{gluonts.__version__}")
     logger.info(f"Using forecaster {forecaster_fq_name} v{forecaster_version}")
 
-    forecaster = forecaster_type.from_inputs(
-        env.datasets["train"], **env.hyperparameters
-    )
+    # forecaster = forecaster_type.from_inputs(
+    #     env.datasets["train"], **env.hyperparameters
+    # )
+
+    forecaster = forecaster_type.from_hyperparameters(**env.hyperparameters)
 
     logger.info(
         f"The forecaster can be reconstructed with the following expression: "
@@ -130,21 +132,43 @@ def run_train(
         )
 
 
+class Filter:
+    def __init__(self, fn, xs):
+        self.fn = fn
+        self.xs = xs
+
+    def __iter__(self):
+        for el in self.xs:
+            if self.fn(el):
+                yield el
+
+    def __len__(self):
+        return sum(1 for _ in self)
+
+
+from gluonts.nursery.glide import partition
+
+
+@partition.register
+def partition_filter(xs: Filter, n):
+    return [Filter(xs.fn, part) for part in partition(xs.xs, n)]
+
+
 def run_test(
     env: TrainEnv, predictor: Predictor, test_dataset: Dataset
 ) -> None:
     len_original = maybe_len(test_dataset)
 
-    test_dataset = TransformedDataset(
-        base_dataset=test_dataset,
-        transformations=[
-            FilterTransformation(
-                lambda x: x["target"].shape[-1] > predictor.prediction_length
-            )
-        ],
-    )
+    from functools import partial
+    from gluonts.mx.loader import inference_data_loader as data_loader
+    from gluonts.nursery.datasource.schema import get_standard_schema
+    from gluonts.nursery.glide import Map, partition
 
     len_filtered = len(test_dataset)
+    test_dataset = Filter(
+        lambda x: x["target"].shape[-1] > predictor.prediction_length,
+        Map(get_standard_schema(freq=predictor.freq), test_dataset),
+    )
 
     if len_original is not None and len_original > len_filtered:
         logger.warning(
